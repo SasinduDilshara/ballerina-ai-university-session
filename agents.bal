@@ -1,5 +1,7 @@
 import ballerina/ai;
+import ballerinax/googleapis.gcalendar;
 import ballerinax/googleapis.gmail;
+
 import ballerina/log;
 
 final ai:Wso2ModelProvider personalAsistantModel = check ai:getDefaultModelProvider();
@@ -9,14 +11,19 @@ final ai:Agent personalAsistantAgent = check new (
         instructions: string `You are Nova, a smart AI assistant helping me stay organized and efficient.
 
 Your primary responsibilities include:
+- Calendar Management: Scheduling and retrieving events from the calendar as per the user's needs.
 - Email Assistance: Reading, summarizing, composing, and sending emails while ensuring clarity and professionalism.
+- Context Awareness: Maintaining a seamless understanding of ongoing tasks and conversations to 
+  provide relevant responses.
+- Privacy & Security: Handling user data responsibly, ensuring sensitive information is kept confidential,
+  and confirming actions before executing them.
 
 Guidelines:
 - Respond in a natural, friendly, and professional tone.
-- Always confirm before making changes to the mailbox.
+- Always confirm before making changes to the user's calendar or sending emails.
 - Provide concise summaries when retrieving information unless the user requests details.
 - Prioritize clarity, efficiency, and user convenience in all tasks.`
-    }, model = personalAsistantModel, tools = [listUnreadEmails, readSpecificEmail, sendEmail, getEmailsByLabels]
+    }, model = personalAsistantModel, tools = [listUnreadEmails, readSpecificEmail, sendEmail, getEmailsByLabels, createCalenderEvent, getCalendarEvents]
 );
 
 # This tool is using to list the unread messages in the users mailbox
@@ -79,4 +86,33 @@ isolated function sendEmail(gmail:MessageRequest payload) returns gmail:Message|
     }
 
     return gmailMessage;
+}
+
+# Creates an calender event.
+# + payload - Data required to create an event 
+# + return - A `gcalendar:Event` if successful, otherwise a `gcalendar:Error`
+@ai:AgentTool
+@display {label: "", iconPath: "https://bcentral-packageicons.azureedge.net/images/ballerinax_googleapis.gcalendar_4.0.1.png"}
+isolated function createCalenderEvent(gcalendar:Event payload) returns gcalendar:Event|error {
+    gcalendar:Event|gcalendar:Error calendarEvent = gcalendarClient->/calendars/["primary"]/events.post(payload);
+    if (calendarEvent is error) {
+        log:printError("Error creating event: ", calendarEvent);
+        return calendarEvent;
+    }
+
+    return calendarEvent;
+}
+
+# Returns calender events.
+# + return - A `gcalendar:Events` if successful, otherwise a `gcalendar:Error`
+@ai:AgentTool
+@display {label: "", iconPath: "https://bcentral-packageicons.azureedge.net/images/ballerinax_googleapis.gcalendar_4.0.1.png"}
+isolated function getCalendarEvents() returns gcalendar:Events|error {
+    gcalendar:Events|gcalendar:Error calendarEvents = gcalendarClient->/calendars/["primary"]/events;
+    if (calendarEvents is error) {
+        log:printError("Error retrieving events: ", calendarEvents);
+        return calendarEvents;
+    }
+
+    return calendarEvents;
 }
